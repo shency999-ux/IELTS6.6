@@ -1,0 +1,7 @@
+{
+  "name": "English Study Assistant",
+  "description": "A comprehensive H5 English learning platform for IELTS/TOEFL learners, featuring listening, speaking, reading, writing, vocabulary, and grammar modules.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
