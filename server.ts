@@ -6,31 +6,59 @@ import { GoogleGenAI, Modality, Type } from "@google/genai";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
-import firebaseConfig from "./firebase-applet-config.json" assert { type: "json" };
+import fs from "fs";
+
+console.log(">>> SERVER.TS LOADING AT " + new Date().toISOString());
 
 dotenv.config();
 
 // Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    projectId: firebaseConfig.projectId,
-  });
-}
-
-// Use the specific database ID if provided in config
-const firestoreDb = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(admin.apps[0]!, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(admin.apps[0]!);
-
+let firestoreDb: any;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  console.log("Starting server function...");
+  
+  try {
+    const firebaseConfig = JSON.parse(fs.readFileSync("./firebase-applet-config.json", "utf-8"));
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    }
+    firestoreDb = firebaseConfig.firestoreDatabaseId 
+      ? getFirestore(admin.apps[0]!, firebaseConfig.firestoreDatabaseId)
+      : getFirestore(admin.apps[0]!);
+    console.log("Firebase Admin initialized.");
+  } catch (e) {
+    console.error("Firebase Admin Init Error:", e);
+  }
+
   const app = express();
   const PORT = 3000;
 
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`>>> Server is listening on port ${PORT} <<<`);
+  });
+
   app.use(express.json());
+
+  // Root test
+  app.get("/express-test", (req, res) => {
+    res.send("Express is working!");
+  });
+
+  // Logging middleware
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+  });
+
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", env: process.env.NODE_ENV });
+  });
 
   // --- Feishu Webhook ---
   app.post("/api/webhook/feishu", async (req, res) => {
@@ -152,23 +180,38 @@ async function startServer() {
   });
 
   // --- Vite / Static Files ---
-  if (process.env.NODE_ENV !== "production") {
+  console.log("Initializing Vite middleware...");
+  try {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
+    console.log("Vite middleware initialized.");
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+    app.get("*", async (req, res, next) => {
+      if (req.url.startsWith("/api")) return next();
+      try {
+        const url = req.originalUrl;
+        const html = fs.readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
+        const transformedHtml = await vite.transformIndexHtml(url, html);
+        res.status(200).set({ "Content-Type": "text/html" }).end(transformedHtml);
+      } catch (e) {
+        console.error("Vite Render Error:", e);
+        next(e);
+      }
+    });
+  } catch (viteError) {
+    console.error("Failed to initialize Vite:", viteError);
+  }
 }
+
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("UNHANDLED REJECTION at:", promise, "reason:", reason);
+});
 
 startServer();
