@@ -4,8 +4,24 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import dotenv from "dotenv";
+import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
+import firebaseConfig from "./firebase-applet-config.json" assert { type: "json" };
 
 dotenv.config();
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    projectId: firebaseConfig.projectId,
+  });
+}
+
+// Use the specific database ID if provided in config
+const firestoreDb = firebaseConfig.firestoreDatabaseId 
+  ? getFirestore(admin.apps[0]!, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(admin.apps[0]!);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +31,46 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  // --- Feishu Webhook ---
+  app.post("/api/webhook/feishu", async (req, res) => {
+    const { secret, word, translation, userId } = req.body;
+    
+    // Security check
+    if (secret !== process.env.WEBHOOK_SECRET) {
+      return res.status(401).json({ error: "Invalid secret" });
+    }
+
+    const targetUid = userId || process.env.TARGET_USER_ID;
+    if (!targetUid) {
+      return res.status(400).json({ error: "Target User ID not specified" });
+    }
+
+    if (!word) {
+      return res.status(400).json({ error: "Word is required" });
+    }
+
+    try {
+      const material = {
+        title: word,
+        content: translation || "",
+        type: "vocabulary",
+        subType: word.includes(" ") ? "phrase" : "word",
+        createdAt: Date.now(),
+        mastery_score: 0,
+        streak: 0,
+        last_seen: Date.now(),
+        next_review_at: Date.now(),
+        uid: targetUid
+      };
+
+      await firestoreDb.collection("materials").add(material);
+      res.json({ success: true, message: "Word added successfully" });
+    } catch (error) {
+      console.error("Webhook Error:", error);
+      res.status(500).json({ error: "Failed to save word" });
+    }
+  });
 
   // --- AI API Routes ---
 

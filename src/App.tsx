@@ -34,10 +34,17 @@ import {
   BookMarked, 
   BarChart3,
   ChevronDown,
-  Settings
+  Settings,
+  LogOut,
+  LogIn,
+  User as UserIcon,
+  Copy,
+  Check
 } from 'lucide-react';
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { signInWithPopup, signOut, googleProvider, auth } from './firebase';
+import { User } from 'firebase/auth';
 
 // --- Constants ---
 const API_KEY_STORAGE_KEY = 'gemini_api_key_v1';
@@ -94,19 +101,46 @@ const Header = ({
   phraseCount,
   onUploadClick,
   materials,
-  onSelectMaterial
+  onSelectMaterial,
+  user
 }: { 
   wordCount: number;
   phraseCount: number;
   onUploadClick: () => void;
   materials: LearningMaterial[];
   onSelectMaterial: (m: LearningMaterial) => void;
+  user: User | null;
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(getApiKey());
+  const [copied, setCopied] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const copyUserId = () => {
+    if (user) {
+      navigator.clipboard.writeText(user.uid);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   const suggestions = searchQuery.trim() 
     ? materials.filter(m => 
@@ -192,6 +226,37 @@ const Header = ({
       </div>
 
       <div className="flex items-center gap-6">
+        {user ? (
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end hidden md:flex">
+              <span className="text-sm font-bold text-white">{user.displayName}</span>
+              <span className="text-[10px] text-zinc-500">{user.email}</span>
+            </div>
+            <div className="relative group">
+              <img 
+                src={user.photoURL || ''} 
+                alt={user.displayName || ''} 
+                className="w-10 h-10 rounded-xl border border-white/10"
+                referrerPolicy="no-referrer"
+              />
+              <button 
+                onClick={handleLogout}
+                className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-900 border border-white/10 rounded-lg flex items-center justify-center text-zinc-400 hover:text-red-400 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button 
+            onClick={handleLogin}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Login</span>
+          </button>
+        )}
         <button 
           onClick={() => setShowSettings(true)}
           className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
@@ -271,6 +336,43 @@ const Header = ({
                     You can get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">Google AI Studio</a>.
                   </p>
                 </div>
+
+                {user ? (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest">Webhook Integration</label>
+                    <div className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-3">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-zinc-500 uppercase font-bold">Your User ID</span>
+                        <div className="flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2 border border-white/5">
+                          <code className="text-xs text-indigo-300 truncate">{user.uid}</code>
+                          <button 
+                            onClick={copyUserId}
+                            className="text-zinc-500 hover:text-white transition-colors"
+                            title="Copy User ID"
+                          >
+                            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-zinc-500 uppercase font-bold">Webhook URL</span>
+                        <code className="block text-[10px] text-zinc-400 bg-white/5 rounded-lg px-3 py-2 border border-white/5 break-all">
+                          {window.location.origin}/api/webhook/feishu
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
+                    <div className="flex items-center gap-3 text-indigo-400 mb-2">
+                      <UserIcon className="w-4 h-4" />
+                      <span className="text-xs font-bold uppercase tracking-wider">Login Required</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 leading-relaxed">
+                      Please login using the button in the top-right corner to view your User ID and enable Webhook integration.
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-4 flex gap-3">
                   <button 
@@ -2056,8 +2158,26 @@ const GrammarView = ({ materials, onDelete }: { materials: LearningMaterial[], o
 // --- Main App ---
 
 export default function App() {
-  const { state, addMaterial, batchAddMaterials, deleteMaterial, updateMaterial, setActiveModule, getDashboardStats } = useAppState();
+  const { 
+    state, 
+    user, 
+    isAuthReady, 
+    addMaterial, 
+    batchAddMaterials, 
+    deleteMaterial, 
+    updateMaterial, 
+    setActiveModule, 
+    getDashboardStats 
+  } = useAppState();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const filteredMaterials = state.materials.filter(m => m.type === state.activeModule);
 
@@ -2082,6 +2202,7 @@ export default function App() {
           onUploadClick={() => setIsUploadOpen(true)}
           materials={state.materials}
           onSelectMaterial={(m) => setActiveModule(m.type)}
+          user={user}
         />
         
         <div className="flex flex-1 overflow-hidden">

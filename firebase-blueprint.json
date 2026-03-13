@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "LearningMaterial": {
+      "title": "Learning Material",
+      "description": "A piece of learning content like a word, phrase, or reading material",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["reading", "writing", "vocabulary", "grammar"] },
+        "subType": { "type": "string", "enum": ["word", "phrase"] },
+        "createdAt": { "type": "number" },
+        "mastery_score": { "type": "number" },
+        "streak": { "type": "number" },
+        "last_seen": { "type": "number" },
+        "next_review_at": { "type": "number" },
+        "uid": { "type": "string", "description": "Owner of the material" }
+      },
+      "required": ["title", "type", "createdAt", "uid"]
+    }
+  },
+  "firestore": {
+    "/materials/{materialId}": {
+      "schema": "LearningMaterial",
+      "description": "Collection of learning materials"
+    }
+  }
+}
