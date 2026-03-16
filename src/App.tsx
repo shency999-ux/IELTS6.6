@@ -2264,6 +2264,49 @@ export default function App() {
                   {state.activeModule === 'writing' && <WritingView materials={filteredMaterials} onDelete={deleteMaterial} onAdd={addMaterial} onUpdate={updateMaterial} />}
                   {state.activeModule === 'vocabulary' && <VocabularyView materials={filteredMaterials} onUpdate={updateMaterial} onDelete={deleteMaterial} />}
                   {state.activeModule === 'grammar' && <GrammarView materials={filteredMaterials} onDelete={deleteMaterial} />}
+                  {/* 飞书单词同步按钮 */}
+<div className="sync-section" style={{ 
+  margin: '20px 0', 
+  padding: '15px', 
+  backgroundColor: '#e8f5e8', 
+  borderRadius: '8px',
+  border: '1px solid #4CAF50'
+}}>
+  <h3 style={{ margin: '0 0 10px 0', color: '#2e7d32' }}>飞书词汇同步</h3>
+  <button 
+    onClick={async () => {
+      try {
+        const response = await fetch('/api/sync-vocabulary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert(`同步成功！共 ${result.count} 个单词已同步到网站`);
+        } else {
+          alert(`同步失败：${result.message}`);
+        }
+      } catch (error) {
+        console.error('Sync error:', error);
+        alert('同步出错，请检查控制台');
+      }
+    }}
+    style={{
+      padding: '10px 20px',
+      backgroundColor: '#4CAF50',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: 'bold'
+    }}
+  >
+    🔄 同步飞书单词到网站
+  </button>
+</div>
                 </motion.div>
               </AnimatePresence>
             </div>
