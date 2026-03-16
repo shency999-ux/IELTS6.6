@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { syncVocabularyFromFeishu } from '../server';
 import { 
   Plus, 
   Search, 
@@ -48,6 +49,10 @@ import { User } from 'firebase/auth';
 
 // --- Constants ---
 const API_KEY_STORAGE_KEY = 'gemini_api_key_v1';
+
+const handleSync = async () => {
+  await syncVocabularyFromFeishu();
+};
 
 const getApiKey = () => {
   // @ts-ignore
