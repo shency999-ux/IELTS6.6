@@ -665,7 +665,18 @@ const UploadModal = ({
             <X className="w-5 h-5" />
           </button>
         </div>
-
+        <button 
+  onClick={async () => {
+    try {
+      const result = await syncVocabularyFromFeishu();
+      alert(`同步完成！${result.count} 个单词已同步`);
+    } catch (error) {
+      alert('同步失败：' + error.message);
+    }
+  }}
+>
+  同步飞书单词到网站
+</button>
         <div className="p-6 space-y-6">
           <div className="flex p-1 bg-black/40 rounded-xl">
             <button 
