@@ -1941,17 +1941,22 @@ const VocabularyView = ({ materials, onUpdate, onDelete }: { materials: Learning
                   ) : (
                     <div className="space-y-6">
                       {currentMaterial.chinese && (
-                        <div className="text-center">
+                        <div className="text-center p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
                           <p className="text-3xl font-bold text-indigo-400 mb-1">{currentMaterial.chinese}</p>
                           <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Chinese Translation</p>
                         </div>
                       )}
-                      <div className="space-y-2">
-                        <p className="text-xl text-white font-medium italic">
+                      <div className="space-y-3 text-left">
+                        <div className="flex items-center gap-2">
+                          <div className="h-px flex-1 bg-white/5" />
+                          <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Notes & Definition</span>
+                          <div className="h-px flex-1 bg-white/5" />
+                        </div>
+                        <p className="text-xl text-white font-medium italic leading-relaxed">
                           {currentMaterial.content}
                         </p>
                         {currentMaterial.partOfSpeech && (
-                          <span className="inline-block px-2 py-0.5 rounded bg-white/5 text-zinc-500 text-[10px] font-bold uppercase">
+                          <span className="inline-block px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase border border-indigo-500/20">
                             {currentMaterial.partOfSpeech}
                           </span>
                         )}

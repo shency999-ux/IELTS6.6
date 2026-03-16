@@ -60,8 +60,16 @@ async function startServer() {
     res.json({ status: "ok", env: process.env.NODE_ENV });
   });
 
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "API is working!", time: new Date().toISOString() });
+  });
+
   // --- Feishu Webhook ---
-  app.post("/api/webhook/feishu", async (req, res) => {
+  app.get(["/api/webhook/feishu", "/api/webhook/feishu/"], (req, res) => {
+    res.send("Webhook endpoint is active! Please use POST method to send data.");
+  });
+
+  app.post(["/api/webhook/feishu", "/api/webhook/feishu/"], async (req, res) => {
     const { secret, word, translation, userId } = req.body;
     
     // Security check
@@ -82,6 +90,7 @@ async function startServer() {
       const material = {
         title: word,
         content: translation || "",
+        chinese: translation || "", // Save translation to chinese field for UI display
         type: "vocabulary",
         subType: word.includes(" ") ? "phrase" : "word",
         createdAt: Date.now(),
@@ -177,6 +186,16 @@ async function startServer() {
       console.error("Server TTS Error:", error);
       res.status(500).json({ error: "TTS generation failed" });
     }
+  });
+
+  // API 404 Handler
+  app.use("/api", (req, res) => {
+    console.log(`[API 404] ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ 
+      error: "API route not found", 
+      method: req.method,
+      path: req.originalUrl 
+    });
   });
 
   // --- Vite / Static Files ---
