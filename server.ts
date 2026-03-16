@@ -44,6 +44,58 @@ async function startServer() {
 
   app.use(express.json());
 
+  // --- Feishu Table Sync Helper ---
+  async function syncToFeishuTable(word: string, translation: string) {
+    const appId = process.env.FEISHU_APP_ID;
+    const appSecret = process.env.FEISHU_APP_SECRET;
+    const appToken = process.env.FEISHU_APP_TOKEN;
+    const tableId = process.env.FEISHU_TABLE_ID;
+
+    if (!appId || !appSecret || !appToken || !tableId) {
+      console.log("Feishu sync skipped: Missing environment variables.");
+      return;
+    }
+
+    try {
+      // 1. Get Tenant Access Token
+      const authRes = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ app_id: appId, app_secret: appSecret })
+      });
+      const authData: any = await authRes.json();
+      const token = authData.tenant_access_token;
+
+      if (!token) throw new Error("Failed to get Feishu tenant token");
+
+      // 2. Add Record to Table
+      // Note: We assume the table has fields named "Word" and "Translation" (or similar)
+      // We will try to map common names.
+      const recordRes = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          fields: {
+            "Word": word,
+            "Translation": translation,
+            "SyncTime": new Date().toISOString()
+          }
+        })
+      });
+      const recordData: any = await recordRes.json();
+      if (recordData.code !== 0) {
+        console.error("Feishu Record Error:", recordData.msg);
+      } else {
+        console.log(`Successfully synced "${word}" to Feishu table.`);
+      }
+    } catch (error) {
+      console.error("Feishu Sync Exception:", error);
+    }
+  }
+
   // Root test
   app.get("/express-test", (req, res) => {
     res.send("Express is working!");
@@ -102,10 +154,27 @@ async function startServer() {
       };
 
       await firestoreDb.collection("materials").add(material);
+      
+      // Sync to Feishu Table asynchronously
+      syncToFeishuTable(word, translation || "");
+
       res.json({ success: true, message: "Word added successfully" });
     } catch (error) {
       console.error("Webhook Error:", error);
       res.status(500).json({ error: "Failed to save word" });
+    }
+  });
+
+  // 2. Add Record to Table
+  app.post("/api/feishu/sync", async (req, res) => {
+    const { word, translation } = req.body;
+    if (!word) return res.status(400).json({ error: "Word is required" });
+    
+    try {
+      await syncToFeishuTable(word, translation || "");
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Sync failed" });
     }
   });
 

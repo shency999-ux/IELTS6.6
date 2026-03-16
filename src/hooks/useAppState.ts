@@ -73,6 +73,19 @@ export function useAppState() {
 
     try {
       const docRef = await addDoc(collection(db, 'materials'), newMaterial);
+      
+      // If it's vocabulary, sync to Feishu table
+      if (newMaterial.type === 'vocabulary') {
+        fetch('/api/feishu/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            word: newMaterial.title, 
+            translation: (newMaterial as any).chinese || newMaterial.content 
+          })
+        }).catch(err => console.error("Feishu sync error:", err));
+      }
+
       return { id: docRef.id, ...newMaterial };
     } catch (error) {
       console.error("Error adding material:", error);
