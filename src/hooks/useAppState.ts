@@ -53,13 +53,32 @@ export function useAppState() {
       setState(prev => ({ ...prev, materials }));
     }, (error) => {
       console.error("Firestore Error:", error);
+      if (error.code === 'failed-precondition') {
+        console.warn("Firestore index missing. Please create the index using the link in the console error.");
+      }
     });
 
     return () => unsubscribe();
   }, [user, isAuthReady]);
 
   const addMaterial = async (material: Omit<LearningMaterial, 'id' | 'createdAt'>) => {
-    if (!user) return;
+    if (!user) {
+      // Temporary local storage for guests
+      const newMaterial = {
+        ...material,
+        id: `local-${Date.now()}`,
+        createdAt: Date.now(),
+        uid: 'guest',
+        mastery_score: material.mastery_score ?? 0,
+        streak: material.streak ?? 0,
+        last_seen: material.last_seen ?? Date.now(),
+        next_review_at: material.next_review_at ?? Date.now()
+      } as LearningMaterial;
+      
+      setState(prev => ({ ...prev, materials: [newMaterial, ...prev.materials] }));
+      console.warn("Guest mode: Data is only saved in memory and will be lost on refresh. Please login to save permanently.");
+      return newMaterial;
+    }
     
     const newMaterial = {
       ...material,

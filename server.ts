@@ -303,20 +303,3 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 startServer();
-// 在 server.ts 文件末尾添加
-export async function syncVocabularyFromFeishu() {
-  // ...（完整的同步函数代码）
-}
-
-// 飞书词汇同步API端点
-app.post('/api/sync-vocabulary', async (req, res) => {
-  try {
-    console.log('Received sync request');
-    const result = await syncVocabularyFromFeishu();
-    console.log('Sync result:', result);
-    res.json(result);
-  } catch (error) {
-    console.error('API sync error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
