@@ -1,0 +1,33 @@
+{
+  "date": "2026-03-17",
+  "total_words": 3,
+  "words": [
+    {
+      "word": "analysis",
+      "phonetic": "/əˈnælɪsɪs/",
+      "chinese_definition": "分析；分解",
+      "english_definition": "Decomposition into components in order to study (a complex thing, concept, theory etc.).",
+      "examples": ["Statistical analysis of the data revealed interesting patterns.", "The analysis of the poem took several hours."],
+      "category": "B2",
+      "type": "IELTS academic"
+    },
+    {
+      "word": "persistent",
+      "phonetic": "/pəˈsɪstənt/",
+      "chinese_definition": "坚持不懈的；持续的；固执的",
+      "english_definition": "Obstinately refusing to give up or let go.",
+      "examples": ["She has had a persistent cough for weeks.", "There was a persistent knocking on the door.", "There have been persistent rumours for years."],
+      "category": "B1",
+      "type": "daily English"
+    },
+    {
+      "word": "resilient",
+      "phonetic": "/rɪˈzɪliənt/",
+      "chinese_definition": "有弹性的；适应力强的；坚韧的",
+      "english_definition": "(organisms or people, of systems) Returning quickly to normal after damaging events or conditions.",
+      "examples": ["Children are often more resilient than adults.", "The economy proved resilient during the crisis.", "She showed resilient determination in the face of adversity."],
+      "category": "C1",
+      "type": "business English"
+    }
+  ]
+}
